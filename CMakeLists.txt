@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.15)
-project(Even1)
+project(untitled6)
 
 set(CMAKE_CXX_STANDARD 11)
 
-add_executable(Even1 main.cpp)
+add_executable(untitled6 main.cpp main.cpp lexer.cpp lexer.h)
