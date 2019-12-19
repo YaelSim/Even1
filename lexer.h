@@ -8,13 +8,19 @@
 #include <iostream>
 #include <fstream>
 #include <string>
-#include <bits/locale_facets.tcc>
-#include <bits/regex.h>
+#include <regex>
 #include <vector>
 using namespace std;
 class Lexer {
+private:
+    bool strWithBrackets(string str);
+    bool strWithComma(string str);
+    bool strWithRightArrow(string str);
+    bool strWithLeftArrow(string str);
+//    bool strWithVar(string str);
+//    bool strWithQuote(string str);
 public:
-    bool strWithPar(string str);
+    Lexer() = default;
     vector<string> lexer(string fileName);
 };
 
