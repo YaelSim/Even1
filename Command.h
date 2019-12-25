@@ -1,58 +1,94 @@
 //
 // Created by yael on 19/12/2019.
 //
-
-#ifndef UNTITLED6_COMMAND_H
-#define UNTITLED6_COMMAND_H
+#ifndef EVEN1_COMMAND_H
+#define EVEN1_COMMAND_H
 
 #include <string>
+#include <sstream>
 #include <iostream>
+#include <thread>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <mutex>
+#include <unistd.h>
+#include <vector>
+#include "VarObjects.h"
+#include "SymbolTable.h"
+#include <regex>
+#include "ex1.h"
+#include "Expression.h"
+#include "Interpreter.h"
+
 using namespace std;
 
+int readWithServer(string portToListen);
+
 class Command {
+protected:
+    int convertStringToInt(string toConvert);
+    bool isItVarNamePattern(string potential);
+    bool isItExpressionPattern(string potential);
 public:
-    virtual int execute() = 0;
+    virtual int execute(vector<string> lexer) = 0;
 };
 
 class OpenServerCommand : public Command {
 public:
-    int execute() override;
+    OpenServerCommand() = default;
+    int execute(vector<string> lexer) override;
+};
+
+class UpdateVarCommand : public Command {
+public:
+    UpdateVarCommand() = default;
+    int execute(vector<string> lexer) override;
 };
 
 class DefineVarCommand : public Command {
-private:
-    string _varName;
-    string _arrow;
-    string _simParam;
-    double _varValue = 0;
 public:
-    int execute() override;
+    DefineVarCommand() = default;
+    int execute(vector<string> lexer) override;
 };
 
 class ConnectCommand : public Command {
 public:
-    int execute() override;
+    ConnectCommand() = default;
+    int execute(vector<string> lexer) override;
 };
 
 class PrintCommand : public Command {
-private:
-    string _toPrint;
 public:
-    int execute() override;
+    PrintCommand() = default;
+    int execute(vector<string> lexer) override;
 };
 
-class WhileCommand : public Command {
-private:
-    string _condition;
-
+class ConditionParser : public Command {
+protected:
+    double getParametersValue(string param);
+    map<string, Command*> commandsForLoops(vector<string> lexer);
+    bool isConditionTrue(double param1, double param2, string condition);
 public:
-    int execute() override;
+    ConditionParser() = default;
+    int execute(vector<string> lexer) override = 0;
+};
+
+class WhileCommand : public ConditionParser {
+public:
+    WhileCommand() = default;
+    int execute(vector<string> lexer) override;
+};
+
+class IfCommand : public ConditionParser {
+public:
+    IfCommand() = default;
+    int execute(vector<string> lexer) override;
 };
 
 class SleepCommand : public Command {
-private:
-    int _secsToSleep = 0;
 public:
-    int execute() override;
+    SleepCommand() = default;
+    int execute(vector<string> lexer) override;
 };
-#endif //UNTITLED6_COMMAND_H
+#endif //EVEN1_COMMAND_H

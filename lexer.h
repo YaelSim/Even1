@@ -2,8 +2,9 @@
 // Created by yael on 19/12/2019.
 //
 
-#ifndef UNTITLED6_LEXER_H
-#define UNTITLED6_LEXER_H
+#ifndef EVEN1_LEXER_H
+#define EVEN1_LEXER_H
+
 
 #include <iostream>
 #include <fstream>
@@ -17,11 +18,14 @@ private:
     bool strWithComma(string str);
     bool strWithRightArrow(string str);
     bool strWithLeftArrow(string str);
-//    bool strWithVar(string str);
-//    bool strWithQuote(string str);
+    bool strWithEqual(string str);
+    bool strWithWhile(string str);
+    bool strWithIf(string str);
+    bool strWithVar(string str);
 public:
     Lexer() = default;
     vector<string> lexer(string fileName);
 };
 
-#endif //UNTITLED6_LEXER_H
+
+#endif //EVEN1_LEXER_H
