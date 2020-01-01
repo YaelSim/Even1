@@ -32,7 +32,20 @@ Each of the components above has a critical part in EVEN1.
 
 Lexer - a class that is responsible for reading the .txt file, dividing its' content to strings and stores them in a Vector<string>. Of course it will handle spaces, tabs, EOF-s, '\n', etc.
   
-Parser - a class that is responsible for -simple as it is- parsing the given vector and "getting a command" out of the given strings. Each command differs in the amount and type of parameters, so each type of command is handled differently.
+Parser - a class that is responsible for -simple as it is- parsing the given vector and "getting a command" out of the given strings. Each command differs in the amount and type of parameters, so each type of command is handled differently. Let us view this pseudo code-
+
+      while (!lexVec.empty()) {
+        key = lexVec.at(index);
+        if (curr != nullptr) {
+            index += (*curr).execute(lexVec);
+        }
+        // delete from lexer vector the strings that has been already used
+        while (index != 0) {
+            auto first = lexVec.begin();
+            lexVec.erase(first);
+            index--;
+        }
+    }
 
 SymbolTable- a class that resembles to the computer's main memory symbol table. Each var to be declared in the .txt or the .xml files will be inserted to the symbol table. That enables us to know what is the most updated value of a var, for example. This class is implemented with 2 unordered_maps<string, VarObject*>.
 
