@@ -101,10 +101,37 @@ This is an example of how we call the interpreter and calculate a given expressi
         }
         std::cout << e << std::endl;
     }
+    
+    
+ Command - a class that describes the behaviour of a general command. The types of commands are - Sleep, Print, DefineVarCommand, UpdateVarCommand, WhileCommand, IfCommand. Each commands is executed according to her functionality. for example, let's read (some of) the PrintCommand execution method:
+ 
+          
+    int PrintCommand::execute(vector<string> lexer) {
+        auto i = lexer.begin();
+       int numOfParams = 2, stringPrintFlag = 0;
+       string toPrint = (*(i + 1));
+        toPrint = convertVarsToVals(toPrint);
+        if (isItExpressionPattern(toPrint)) {
+            Interpreter *interpreter = new Interpreter();
+            Expression *expression = nullptr;
+            try {
+            //Remove spaces
+                std::string::iterator end_pos = std::remove(toPrint.begin(), toPrint.end(), ' ');
+                toPrint.erase(end_pos, toPrint.end());
+                expression = interpreter->interpret(toPrint);
+                toPrint = to_string(expression->calculate());
+           }
+         cout << toPrint << endl;
+        return numOfParams;
+      }
+
   
   
   Thanks for reading! You're good to go!
+  
   We hope you've enjoyed viewing our project!
+  
   Please contact us for further details :)
+  
 
         Yael and Linoy
