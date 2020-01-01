@@ -104,7 +104,7 @@ This is an example of how we call the interpreter and calculate a given expressi
   
   
   Thanks for reading! You're good to go!
-  I hope you've enjoyed viewing our project!
+  We hope you've enjoyed viewing our project!
   Please contact us for further details :)
 
         Yael and Linoy
