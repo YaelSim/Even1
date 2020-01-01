@@ -32,7 +32,9 @@ Each of the components above has a critical part in EVEN1.
 
 Lexer - a class that is responsible for reading the .txt file, dividing its' content to strings and stores them in a Vector<string>. Of course it will handle spaces, tabs, EOF-s, '\n', etc.
   
+  
 Parser - a class that is responsible for -simple as it is- parsing the given vector and "getting a command" out of the given strings. Each command differs in the amount and type of parameters, so each type of command is handled differently. Let us view this pseudo code-
+
 
       while (!lexVec.empty()) {
         key = lexVec.at(index);
@@ -47,12 +49,58 @@ Parser - a class that is responsible for -simple as it is- parsing the given vec
         }
     }
 
-SymbolTable- a class that resembles to the computer's main memory symbol table. Each var to be declared in the .txt or the .xml files will be inserted to the symbol table. That enables us to know what is the most updated value of a var, for example. This class is implemented with 2 unordered_maps<string, VarObject*>.
+
+SymbolTable- a class that resembles to the computer's main memory symbol table. Each var to be declared in the .txt or the .xml files will be inserted to the symbol table. That enables us to know what is the most updated value of a var, for example. This class is implemented with 2 unordered_maps<string, VarObject*>. For instance, the add/update method is we've implemented is seprated for each map.
+
+
+    void SymbolTable::actOnTxtSymbolTable(string name, VarObject* varObj) {
+      if (this->txtSymbolTable.find(name) == this->txtSymbolTable.end()) {
+          this->txtSymbolTable.insert({name, varObj});
+      } else {
+        this->txtSymbolTable.at(name)->setVarValue((*varObj).getVarValue()); 
+      }
+    }
+    void SymbolTable::actOnXmlSymbolTable(string name, VarObject* varObj) {
+     if (this->xmlSymbolTable.find(name) == this->xmlSymbolTable.end()) {
+         this->xmlSymbolTable.insert({name, varObj});
+     } else {
+         this->xmlSymbolTable.at(name)->setVarValue((*varObj).getVarValue());
+      }
+    }        
+    
 
 VarObject - a data class that combines the properties of a var - value, sim path (the location of the var's value in the flightgear simulator) and arrow (defined in the .txt file).
 
+
+      class VarObject {
+      private:
+         string _sim;
+         string _arrow;
+         float _varValue;
+      };
+
+
 Interpreter, Expression, ex1 - classes that were imported from our previous project, that are responsible for handling arithmetic expressions. For instance, if the sleep command recieves as parameter (50+90+2-10) milliseconds, we'll use our interpreter to calculate the parameter's value and determine the exact amout of time required to sleep.
-  
+This is an example of how we call the interpreter and calculate a given expression-
+
+
+      Interpreter* i3 = new Interpreter();
+    Expression* e6 = nullptr;
+    try {
+        i3->setVariables("x=-210;y=-8");
+        e6 = i3->interpret("-x/70");
+        std::cout << "6: " << e6->calculate() << std::endl;
+        delete e6;
+        delete i3;
+    } catch (const char* e) {
+        if (e6 != nullptr) {
+            delete e6;
+        }
+        if (i3 != nullptr) {
+            delete i3;
+        }
+        std::cout << e << std::endl;
+    }
   
   
   Thanks for reading! You're good to go!
