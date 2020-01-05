@@ -1,5 +1,5 @@
 //
-// Created by yael on 19/12/2019.
+// Created by yael and linoy on 19/12/2019.
 //
 #include "lexer.h"
 #include <iostream>
@@ -9,60 +9,59 @@
 
 using namespace std;
 
+// regex to check if there is brackets in the string
 bool Lexer::strWithBrackets(string str) {
     regex check("(.*)\\((.*)\\)(.*)");
     return regex_match(str, check);
 }
-
+//regex to check if there is comma in the string
 bool Lexer::strWithComma(string str) {
     regex check("(.*)(\\,)(.*)");
     return regex_match(str, check);
 }
-
+//regex to check if there is left arrow in the string
 bool Lexer::strWithLeftArrow(string str) {
     regex check("(.*)(<-)(.*)");
     return regex_match(str, check);
 }
-
+//regex to check if there is right arrow in the string
 bool Lexer::strWithRightArrow(string str) {
     regex check("(.*)(->)(.*)");
     return regex_match(str, check);
 }
-
-
+//regex to check if there is equal sign in the string
 bool Lexer::strWithEqual(string str) {
-    bool result;
-    //regex check("(.*)(=)(.*)");
     regex check("(.*)[^<>](=)(.*)");
     return regex_match(str, check);
 }
-
+//regex to check if there is double equals in the string
+bool Lexer::strWithDoubleEqual(string str) {
+    regex check("(.*)[^<>](==)(.*)");
+    return regex_match(str, check);
+}
+//regex to check if there is "while" in the string
 bool Lexer::strWithWhile(string str) {
     regex check("(.*)(while)(.*)");
     return regex_match(str, check);
 }
-
+//regex to check if there is "var" in the string
 bool Lexer::strWithVar(string str) {
     regex check("(.*)(var)(.*)");
     return regex_match(str, check);
 }
-
+//regex to check if there is "if" in the string
 bool Lexer::strWithIf(string str) {
     regex check("(.*)(if)(.*)");
     return regex_match(str, check);
 }
-
-//bool Lexer::strWithQuote(string str) {
-//    regex check("\"([^\"]|")(*\\"");
-//    return regex_match(str, check);
-//}
-
+// this method takes the text and convert it to a vector of strings
 vector<string> Lexer::lexer(string fileName) {
     string line, token, tempToken, subTempToken, leftBracket = "(", rightBracket = ")", comma = ",", quote = "\"";
-    string leftArrow = "<-", rightArrow = "->", space = " ", equal = "=";
-    int flag, flagWhile;
+    string leftArrow = "<-", rightArrow = "->", space = " ", equal = "=", doubleEqual = "==";
+    int flag, flagWhile, printFlag, pushFlag;
     vector<string> lexVec;
     ifstream file;
+    // ofen the text file
     file.open(fileName, ios::in);
     if (!file) {
         cout << "can't open the file - no arguments" << endl;
@@ -73,28 +72,68 @@ vector<string> Lexer::lexer(string fileName) {
     while (!file.eof()) {
         flag = 0;
         flagWhile = 0;
+        printFlag = 0;
+        pushFlag = 0;
         getline(file, line);
         if(strWithWhile(line) || strWithIf(line)) {
             // do until the end of the while
             while(line != "}") {
+                // take off all the spaces in the beginning
+                while(line.find(space) == 0) {
+                    line = line.substr(line.find(space) + 1);
+                }
                 // check if there is =
                 if(strWithEqual(line)) {
                     token = line.substr(0, line.find(equal));
-                    // remove the space before
-                    if(token.find("\t") != -1) {
-                        token = token.substr((line.find("\t") + 1));
+                    // remove the tabs before
+                    if(token.find('\t') != -1) {
+                        token = token.substr((line.find('\t') + 1));
+                    }
+                    // remove the spaces before
+                    if(token.find(space) != -1) {
+                        subTempToken = token.substr(token.find(space) + 1);
+                        if(subTempToken.find(space) != -1) {
+                            subTempToken = subTempToken.substr(0, subTempToken.find(space));
+                        }
+                        token = token.substr(0,token.find(space));
                     }
                     lexVec.push_back(token);
-                    lexVec.push_back(equal);
-                    line = line.substr((line.find(equal) + 2));
+                    if(subTempToken != "" && subTempToken != token) {
+                        lexVec.push_back(subTempToken);
+                    }
+                    //push double == if exist
+                    if(strWithDoubleEqual(line)) {
+                        lexVec.push_back(doubleEqual);
+                        line = line.substr((line.find(equal) + 1));
+                    } else {
+                        lexVec.push_back(equal);
+                    }
+                    line = line.substr((line.find(equal) + 1));
+                    if(line.find('{') != -1) {
+                        line = line.substr(0,line.find('{'));
+                        pushFlag = 1;
+                    }
+                    if(line.find(space) == 0) {
+                        line = line.substr(line.find(space) + 1);
+                    }
                     lexVec.push_back(line);
+                    // we push it  beacuse remove before
+                    if(pushFlag == 1) {
+                        lexVec.push_back("{");
+                        pushFlag = 0;
+                    }
                     // go to the next line
                     getline(file, line);
                     continue;
                 }
 
                 while (line.find(space) != -1) {
+                    //take off a lot of space in the beginning
+                    while(line.find(space) == 0) {
+                        line = line.substr(line.find(space) + 1);
+                    }
                     tempToken = line.substr(0, line.find(space));
+                    // take off the brackets
                     if(tempToken.find(leftBracket) != -1) {
                         subTempToken = tempToken.substr(0, tempToken.find(leftBracket));
                         lexVec.push_back(subTempToken);
@@ -147,12 +186,12 @@ vector<string> Lexer::lexer(string fileName) {
                     }
                 }
 
-                // check if there is ()
+                // check if there is brackets
                 if(strWithBrackets(line)) {
                     token = line.substr(0, line.find(leftBracket));
-                    // remove the space before
-                    if(token.find("\t") != -1) {
-                        token = token.substr((line.find("\t") + 1));
+                    // remove the tabs before
+                    if(token.find('\t') != -1) {
+                        token = token.substr((line.find('\t') + 1));
                     }
                     lexVec.push_back(token);
                     token = line.substr((line.find(leftBracket) + 1), line.find(rightBracket));
@@ -168,6 +207,29 @@ vector<string> Lexer::lexer(string fileName) {
             continue;
         }
 
+        // check if there is equal sign
+        if(strWithEqual(line) && !strWithVar(line)) {
+            token = line.substr(0, line.find(equal));
+            // remove the tabs before
+            if(token.find('\t') != -1) {
+                token = token.substr((line.find('\t') + 1));
+            }
+            // remove the space before
+            while (token.find(space) == 0 ) {
+                token = token.substr(token.find(space) + 1);
+            }
+            if(token.find(space) != -1) {
+                token = token.substr(0,token.find(space));
+            }
+            lexVec.push_back(token);
+            lexVec.push_back(equal);
+            line = line.substr((line.find(equal) + 2));
+            std::string::iterator end_pos = std::remove(line.begin(), line.end(), ' ');
+            line.erase(end_pos, line.end());
+            lexVec.push_back(line);
+            continue;
+        }
+
         // check line with brackets and its not while or if
         if(strWithBrackets(line)) {
             token = line.substr(0, line.find(leftBracket));
@@ -179,11 +241,15 @@ vector<string> Lexer::lexer(string fileName) {
                     subTempToken = tempToken.substr(0, tempToken.find(space));
                     lexVec.push_back(subTempToken);
                     tempToken = tempToken.substr((tempToken.find(space) + 1));
+                    if(tempToken.find(space) != -1) {
+                        tempToken = tempToken.substr(0,tempToken.find(space));
+                    }
                     lexVec.push_back(tempToken);
                 }
                 token = token.substr((token.find(leftArrow) + 2));
                 lexVec.push_back(leftArrow);
             }
+            // check if there is arrow in the string and split with it
             if(strWithRightArrow(token)) {
                 tempToken = token.substr(0, token.find(rightArrow));
                 // check if there is a space
@@ -191,18 +257,27 @@ vector<string> Lexer::lexer(string fileName) {
                     subTempToken = tempToken.substr(0, tempToken.find(space));
                     lexVec.push_back(subTempToken);
                     tempToken = tempToken.substr((tempToken.find(space) + 1));
+                    if(tempToken.find(space) != -1) {
+                        tempToken = tempToken.substr(0,tempToken.find(space));
+                    }
                     lexVec.push_back(tempToken);
                 }
                 token = token.substr((token.find(rightArrow) + 2));
                 lexVec.push_back(rightArrow);
             }
+            // take off the spaces before
             if(token.find(space) == 0) {
                 token = token.substr(token.find(space) + 1);
             }
             lexVec.push_back(token);
             token = line.substr((line.find(leftBracket) + 1), line.find(rightBracket));
             token = token.substr(0, token.find(rightBracket));
-            if (strWithComma(token)) {
+            // if its print or sleep no need to split with comma
+            if(lexVec.back() == "print" || lexVec.back() == "Print" ||
+                lexVec.back() == "sleep" || lexVec.back() == "Sleep") {
+                printFlag = 1;
+            }
+            if (strWithComma(token) && printFlag == 0) {
                 token = token.substr(0, token.find(comma));
                 lexVec.push_back(token);
                 token = line.substr((line.find(comma) + 1));
@@ -219,25 +294,21 @@ vector<string> Lexer::lexer(string fileName) {
                 lexVec.push_back(tempToken);
                 token = token.substr((token.find(space) + 1));
             }
+            // take off the spaces
             if(token.find(space) != -1) {
                 token = token.substr(0,token.find(space));
             }
             lexVec.push_back(token);
             lexVec.push_back(equal);
             token = line.substr((line.find(equal) + 2));
+            // take off the spaces
             if(token.find(space) != -1) {
                 token = token.substr(0,token.find(space));
             }
             lexVec.push_back(token);
         }
     }
-    // close the file
+    // close the file and return the vector we got
     file.close();
-
-    // printtttttttttttttt only for chek
-//    for(int i = 0; i < lexVec.size(); i++) {
-//        cout << lexVec.at(i) << endl;
-//    }
-
     return lexVec;
 }

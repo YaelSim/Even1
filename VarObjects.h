@@ -1,24 +1,25 @@
 //
-// Created by linoy on 22/12/2019.
+// Created by yael and linoy on 23/12/2019.
 //
 
-#ifndef EVEN1_VAROBJECTS_H
-#define EVEN1_VAROBJECTS_H
+#ifndef UNTITLED6_VAROBJECTS_H
+#define UNTITLED6_VAROBJECTS_H
+
 #include <string>
 #include <iostream>
 using namespace std;
 
 class VarObject {
 public:
-    VarObject(string arrow, string sim, double value);
+    VarObject(string arrow, string sim, float value);
     string getSim();
-    double getVarValue();
+    float getVarValue();
     string getArrow();
-    void setVarValue(double newVal);
+    void setVarValue(float newVal);
 private:
     string _sim;
     string _arrow;
-    double _varValue;
+    float _varValue;
 };
 
-#endif //EVEN1_VAROBJECTS_H
+#endif //UNTITLED6_VAROBJECTS_H

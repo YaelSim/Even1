@@ -1,32 +1,37 @@
 //
-// Created by yael on 19/12/2019.
+// Created by yael and linoy on 19/12/2019.
 //
 
 #include "Command.h"
-
+//Global variables
 SymbolTable symbolTable;
 bool isThreadDone = false;
 bool isProgFinished = false;
 list<string> sendToSim;
 std::mutex progMutex;
 
+//This static method enables receiving details from the simulator.
 int readWithServer(string portToListen) {
     int portAsInt, index = 0, option = 1;
     istringstream iss (portToListen);
+    //Converting the portToListen to int type.
     iss >> portAsInt;
     if (iss.fail()) {
         exit(1);
     }
+    //Creation of socket
     int socketfd = socket(AF_INET, SOCK_STREAM, 0);
     if (socketfd == -1) {
         exit(-1);
     }
     std::cout<<"socket\n"<<std::endl;
+
     // Attaching socket
     if (setsockopt(socketfd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &option, sizeof(option))) {
         exit(-8);
     }
     std::cout<<"socket setsockopt\n"<<std::endl;
+
     struct sockaddr_in sockAddress;
     sockAddress.sin_family = AF_INET;
     //sockAddress.sin_addr.s_addr = inet_addr("127.0.0.1");
@@ -36,10 +41,14 @@ int readWithServer(string portToListen) {
         exit(-2);
     }
     std::cout<<"bind\n"<<std::endl;
+
+    //Listening for clients!
     if (listen(socketfd, 3) < 0) {
         exit(-3);
     }
     std::cout<<"listen\n"<<std::endl;
+
+    //Accepting a client
     int clientSocket = accept(socketfd, (struct sockaddr *) &sockAddress, (socklen_t*) &sockAddress);
     if (clientSocket < 0) {
         exit(-4);
@@ -47,7 +56,7 @@ int readWithServer(string portToListen) {
     std::cout<<"accept\n"<<std::endl;
     close(socketfd);
     isThreadDone = true;
-    //reading from client
+    //reading from client as long as the parser function didn't end its' work
     while (!isProgFinished) {
         index = 0;
         char buffer[1] = {0};
@@ -59,22 +68,23 @@ int readWithServer(string portToListen) {
             val_read = read(clientSocket, buffer, 1);
         }
         vector<string> splitBufferVec = splitBuffer(totalBuffer, ',');
-        totalBuffer[1024] = {0};
+        // update the map by the values we get from buffer
         updateValsOfBufferXmlMap(splitBufferVec);
     }
     return 0;
 }
 
+//This static method receives an array and divides its content into a new Vector<string> (and returns it accordingly).
 vector<string> splitBuffer(char buffer[1024], char comma) {
     vector<string> vec;
     size_t start;
-    //Convert char[] buffer to --> string bufferAsString
+    //Convert char[] buffer to string bufferAsString
     string bufferAsString;
     stringstream stringstream;
     stringstream << buffer;
     stringstream >> bufferAsString;
-    //check that buffer is really as expected !!!!!! --- WITH DEBUG
     size_t end = 0;
+    //push the value that was found to the vector
     while ((start = bufferAsString.find_first_not_of(comma, end)) != std::string::npos) {
         end = bufferAsString.find(comma, start);
         vec.push_back(bufferAsString.substr(start, end - start));
@@ -82,9 +92,11 @@ vector<string> splitBuffer(char buffer[1024], char comma) {
     return vec;
 }
 
+//This static method "fills" the SymbolTable's bufferXmlMap with keys according to generic_small.xml
 void createBufferXmlMap() {
     string arrow = "<-";
     double zeroVal = 0.0;
+    //Fill up the xml map of the symbolTable.
     auto varObject = new VarObject(arrow, "/instrumentation/airspeed-indicator/indicated-speed-kt", zeroVal);
     symbolTable.actOnXmlSymbolTable("/instrumentation/airspeed-indicator/indicated-speed-kt", varObject);
 
@@ -194,6 +206,7 @@ void createBufferXmlMap() {
     symbolTable.actOnXmlSymbolTable("/engines/engine/rpm", varObject);
 }
 
+//This static method receives a vector<string> and updates the SymbolTable's bufferXmlMap according to the given vector.
 void updateValsOfBufferXmlMap(vector<string> vec) {
     VarObject* varObject = symbolTable.getXmlSymbolTable()["/instrumentation/airspeed-indicator/indicated-speed-kt"];
     varObject->setVarValue(stof(vec.at(0)));
@@ -340,13 +353,17 @@ void updateValsOfBufferXmlMap(vector<string> vec) {
     symbolTable.getXmlSymbolTable().at("/engines/engine/rpm") = varObject;
 }
 
+//This static method enables a connection between a socket and the simulator,
+// in order to set variables' values during the program.
 int readWithClient(string ip, string portToListen) {
     int portAsInt;
     istringstream iss (portToListen);
+    //Convert the given portToListen to int type
     iss >> portAsInt;
     if (iss.fail()) {
         exit(1);
     }
+    //Remove "..."
     std::string::iterator end_pos = std::remove(ip.begin(), ip.end(), '"');
     ip.erase(end_pos, ip.end());
     const char* ipAddress = ip.c_str();
@@ -364,9 +381,10 @@ int readWithClient(string ip, string portToListen) {
     } else {
         std::cout<<"Client is now connected to server" <<std::endl;
     }
+    //As long as the parser function didn't end up its' job
     while (!isProgFinished) {
+        //As long as the list of messages is not empty, send each node to the simulator
         if (!sendToSim.empty()) {
-            std::cout<<"Not Empty"<<std::endl;//*******************
             progMutex.lock();
             string currStr = sendToSim.front();
             currStr += "\r\n";
@@ -379,166 +397,25 @@ int readWithClient(string ip, string portToListen) {
             }
         }
     }
-    close(client_socket);
+    //close the socket when finished the program
+    if(isProgFinished) {
+        close(client_socket);
+    }
     return 0;
 }
 
-//void updateValsAccordingToArr(string arr[36]) {
-//        VarObject* varObject = symbolTable.getXmlSymbolTable()["/instrumentation/airspeed-indicator/indicated-speed-kt"];
-//        varObject->setVarValue(stof(arr[0]));
-//        symbolTable.getXmlSymbolTable().at("/instrumentation/airspeed-indicator/indicated-speed-kt") = varObject;
-//
-//        varObject = symbolTable.getXmlSymbolTable()["/sim/time/warp"];
-//        varObject->setVarValue(stof(arr[1]));
-//        symbolTable.getXmlSymbolTable().at("/sim/time/warp") = varObject;
-//
-//        varObject = symbolTable.getXmlSymbolTable()["/controls/switches/magnetos"];
-//        varObject->setVarValue(stof(arr[2]));
-//        symbolTable.getXmlSymbolTable().at("/controls/switches/magnetos") = varObject;
-//
-//        varObject = symbolTable.getXmlSymbolTable()["/instrumentation/heading-indicator/offset-deg"];
-//        varObject->setVarValue(stof(arr[3]));
-//        symbolTable.getXmlSymbolTable().at("/instrumentation/heading-indicator/offset-deg") = varObject;
-//
-//        varObject = symbolTable.getXmlSymbolTable()["/instrumentation/altimeter/indicated-altitude-ft"];
-//        varObject->setVarValue(stof(arr[4]));
-//        symbolTable.getXmlSymbolTable().at("/instrumentation/altimeter/indicated-altitude-ft") = varObject;
-//
-//        varObject = symbolTable.getXmlSymbolTable()["/instrumentation/altimeter/pressure-alt-ft"];
-//        varObject->setVarValue(stof(arr[5]));
-//        symbolTable.getXmlSymbolTable().at("/instrumentation/altimeter/pressure-alt-ft") = varObject;
-//
-//        varObject = symbolTable.getXmlSymbolTable()["/instrumentation/attitude-indicator/indicated-pitch-deg"];
-//        varObject->setVarValue(stof(arr[6]));
-//        symbolTable.getXmlSymbolTable().at("/instrumentation/attitude-indicator/indicated-pitch-deg") = varObject;
-//
-//        varObject = symbolTable.getXmlSymbolTable()["/instrumentation/attitude-indicator/indicated-roll-deg"];
-//        varObject->setVarValue(stof(arr[7]));
-//        symbolTable.getXmlSymbolTable().at("/instrumentation/attitude-indicator/indicated-roll-deg") = varObject;
-//
-//        varObject = symbolTable.getXmlSymbolTable()["/instrumentation/attitude-indicator/internal-pitch-deg"];
-//        varObject->setVarValue(stof(arr[8]));
-//        symbolTable.getXmlSymbolTable().at("/instrumentation/attitude-indicator/internal-pitch-deg") = varObject;
-//
-//        varObject = symbolTable.getXmlSymbolTable()["/instrumentation/attitude-indicator/internal-roll-deg"];
-//        varObject->setVarValue(stof(arr[9]));
-//        symbolTable.getXmlSymbolTable().at("/instrumentation/attitude-indicator/internal-roll-deg") = varObject;
-//
-//        varObject = symbolTable.getXmlSymbolTable()["/instrumentation/encoder/indicated-altitude-ft"];
-//        varObject->setVarValue(stof(arr[10]));
-//        symbolTable.getXmlSymbolTable().at("/instrumentation/encoder/indicated-altitude-ft") = varObject;
-//
-//        varObject = symbolTable.getXmlSymbolTable()["/instrumentation/encoder/pressure-alt-ft"];
-//        varObject->setVarValue(stof(arr[11]));
-//        symbolTable.getXmlSymbolTable().at("/instrumentation/encoder/pressure-alt-ft") = varObject;
-//
-//        varObject = symbolTable.getXmlSymbolTable()["/instrumentation/gps/indicated-altitude-ft"];
-//        varObject->setVarValue(stof(arr[12]));
-//        symbolTable.getXmlSymbolTable().at("/instrumentation/gps/indicated-altitude-ft") = varObject;
-//
-//        varObject = symbolTable.getXmlSymbolTable()["/instrumentation/gps/indicated-ground-speed-kt"];
-//        varObject->setVarValue(stof(arr[13]));
-//        symbolTable.getXmlSymbolTable().at("/instrumentation/gps/indicated-ground-speed-kt") = varObject;
-//
-//        varObject = symbolTable.getXmlSymbolTable()["/instrumentation/gps/indicated-vertical-speed"];
-//        varObject->setVarValue(stof(arr[14]));
-//        symbolTable.getXmlSymbolTable().at("/instrumentation/gps/indicated-vertical-speed") = varObject;
-//
-//        varObject = symbolTable.getXmlSymbolTable()["/instrumentation/heading-indicator/indicated-heading-deg"];
-//        varObject->setVarValue(stof(arr[15]));
-//        symbolTable.getXmlSymbolTable().at("/instrumentation/heading-indicator/indicated-heading-deg") = varObject;
-//
-//        varObject = symbolTable.getXmlSymbolTable()["/instrumentation/magnetic-compass/indicated-heading-deg"];
-//        varObject->setVarValue(stof(arr[16]));
-//        symbolTable.getXmlSymbolTable().at("/instrumentation/magnetic-compass/indicated-heading-deg") = varObject;
-//
-//        varObject = symbolTable.getXmlSymbolTable()["/instrumentation/slip-skid-ball/indicated-slip-skid"];
-//        varObject->setVarValue(stof(arr[17]));
-//        symbolTable.getXmlSymbolTable().at("/instrumentation/slip-skid-ball/indicated-slip-skid") = varObject;
-//
-//        varObject = symbolTable.getXmlSymbolTable()["/instrumentation/turn-indicator/indicated-turn-rate"];
-//        varObject->setVarValue(stof(arr[18]));
-//        symbolTable.getXmlSymbolTable().at("/instrumentation/turn-indicator/indicated-turn-rate") = varObject;
-//
-//        varObject = symbolTable.getXmlSymbolTable()["/instrumentation/vertical-speed-indicator/indicated-speed-fpm"];
-//        varObject->setVarValue(stof(arr[19]));
-//        symbolTable.getXmlSymbolTable().at("/instrumentation/vertical-speed-indicator/indicated-speed-fpm") = varObject;
-//
-//        varObject = symbolTable.getXmlSymbolTable()["/controls/flight/aileron"];
-//        varObject->setVarValue(stof(arr[20]));
-//        symbolTable.getXmlSymbolTable().at("/controls/flight/aileron") = varObject;
-//
-//        varObject = symbolTable.getXmlSymbolTable()["/controls/flight/elevator"];
-//        varObject->setVarValue(stof(arr[21]));
-//        symbolTable.getXmlSymbolTable().at("/controls/flight/elevator") = varObject;
-//
-//        varObject = symbolTable.getXmlSymbolTable()["/controls/flight/rudder"];
-//        varObject->setVarValue(stof(arr[22]));
-//        symbolTable.getXmlSymbolTable().at("/controls/flight/rudder") = varObject;
-//
-//        varObject = symbolTable.getXmlSymbolTable()["/controls/flight/flaps"];
-//        varObject->setVarValue(stof(arr[23]));
-//        symbolTable.getXmlSymbolTable().at("/controls/flight/flaps") = varObject;
-//
-//        varObject = symbolTable.getXmlSymbolTable()["/controls/engines/engine/throttle"];
-//        varObject->setVarValue(stof(arr[24]));
-//        symbolTable.getXmlSymbolTable().at("/controls/engines/engine/throttle") = varObject;
-//
-//        varObject = symbolTable.getXmlSymbolTable()["/controls/engines/current-engine/throttle"];
-//        varObject->setVarValue(stof(arr[25]));
-//        symbolTable.getXmlSymbolTable().at("/controls/engines/current-engine/throttle") = varObject;
-//
-//        varObject = symbolTable.getXmlSymbolTable()["/controls/switches/master-avionics"];
-//        varObject->setVarValue(stof(arr[26]));
-//        symbolTable.getXmlSymbolTable().at("/controls/switches/master-avionics") = varObject;
-//
-//        varObject = symbolTable.getXmlSymbolTable()["/controls/switches/starter"];
-//        varObject->setVarValue(stof(arr[27]));
-//        symbolTable.getXmlSymbolTable().at("/controls/switches/starter") = varObject;
-//
-//        varObject = symbolTable.getXmlSymbolTable()["/engines/active-engine/auto-start"];
-//        varObject->setVarValue(stof(arr[28]));
-//        symbolTable.getXmlSymbolTable().at("/engines/active-engine/auto-start") = varObject;
-//
-//        varObject = symbolTable.getXmlSymbolTable()["/controls/flight/speedbrake"];
-//        varObject->setVarValue(stof(arr[29]));
-//        symbolTable.getXmlSymbolTable().at("/controls/flight/speedbrake") = varObject;
-//
-//        varObject = symbolTable.getXmlSymbolTable()["/sim/model/c172p/brake-parking"];
-//        varObject->setVarValue(stof(arr[30]));
-//        symbolTable.getXmlSymbolTable().at("/sim/model/c172p/brake-parking") = varObject;
-//
-//        varObject = symbolTable.getXmlSymbolTable()["/controls/engines/engine/primer"];
-//        varObject->setVarValue(stof(arr[31]));
-//        symbolTable.getXmlSymbolTable().at("/controls/engines/engine/primer") = varObject;
-//
-//        varObject = symbolTable.getXmlSymbolTable()["/controls/engines/current-engine/mixture"];
-//        varObject->setVarValue(stof(arr[32]));
-//        symbolTable.getXmlSymbolTable().at("/controls/engines/current-engine/mixture") = varObject;
-//
-//        varObject = symbolTable.getXmlSymbolTable()["/controls/switches/master-bat"];
-//        varObject->setVarValue(stof(arr[33]));
-//        symbolTable.getXmlSymbolTable().at("/controls/switches/master-bat") = varObject;
-//
-//        varObject = symbolTable.getXmlSymbolTable()["/controls/switches/master-alt"];
-//        varObject->setVarValue(stof(arr[34]));
-//        symbolTable.getXmlSymbolTable().at("/controls/switches/master-alt") = varObject;
-//
-//        varObject = symbolTable.getXmlSymbolTable()["/engines/engine/rpm"];
-//        varObject->setVarValue(stof(arr[35]));
-//        symbolTable.getXmlSymbolTable().at("/engines/engine/rpm") = varObject;
-//
-//}
-
+//This method provides an implementation of executing OpenServerCommand.
 int OpenServerCommand::execute(vector<string> lexer) {
     auto i = lexer.begin();
     int numOfParams = 2;
     double paramVal;
     string port = (*(i + 1));
+    //Is the port given as an expression (38+324+3434)..
     if (isItExpressionPattern(port)) {
         Interpreter *interpreter = new Interpreter();
         Expression *expression = nullptr;
         try {
+            //remove spaces and return the expression after calculation
             std::string::iterator end_pos = std::remove(port.begin(), port.end(), ' ');
             port.erase(end_pos, port.end());
             expression = interpreter->interpret(port);
@@ -555,25 +432,28 @@ int OpenServerCommand::execute(vector<string> lexer) {
             }
         }
     }
+    //open thread
     std::thread openServerThread(readWithServer, port);
     openServerThread.detach();
     while (!isThreadDone) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
-    std::cout<< "openServer"<<std::endl;
     return numOfParams;
 }
 
+//This method provides an implementation of executing ConnectCommand.
 int ConnectCommand::execute(vector<string> lexer) {
     auto i = lexer.begin();
     int numOfParams = 3;
     string ip = (*(i + 1));
     string port = (*(i + 2));
     double paramVal;
+    //Is the port given as an expression (38+324+3434)..
     if (isItExpressionPattern(port)) {
         Interpreter *interpreter = new Interpreter();
         Expression *expression = nullptr;
         try {
+            //remove spaces and return the expression after calculation
             std::string::iterator end_pos = std::remove(port.begin(), port.end(), ' ');
             port.erase(end_pos, port.end());
             expression = interpreter->interpret(port);
@@ -590,17 +470,19 @@ int ConnectCommand::execute(vector<string> lexer) {
             }
         }
     }
+    //open thread
     std::thread connectThread(readWithClient, ip, port);
     connectThread.detach();
-    std::cout<< "connectClient"<<std::endl;
     return numOfParams;
 }
 
+//This method provides an implementation of executing SleepCommand.
 int SleepCommand::execute(vector<string> lexer) {
     auto i = lexer.begin();
     string param = (*(i + 1));
     double paramVal;
     int numOfParams = 2, toSleep = 0;
+    //Is the amount of time needed to sleep given as an expression (38+324+3434)..
     if (isItExpressionPattern(param)) {
         Interpreter *interpreter = new Interpreter();
         Expression *expression = nullptr;
@@ -621,28 +503,32 @@ int SleepCommand::execute(vector<string> lexer) {
             }
         }
     } else {
+        //if not expression we convert to int
         toSleep = convertStringToInt(param);
     }
     std::this_thread::sleep_for(std::chrono::milliseconds(toSleep));
-    std::cout<< "sleep"<<std::endl;
     return numOfParams;
 }
 
+//This method provides an implementation of executing PrintCommand.
 int PrintCommand::execute(vector<string> lexer) {
     auto i = lexer.begin();
     int numOfParams = 2, stringPrintFlag = 0;
     string toPrint = (*(i + 1));
+    //Is toPrint an Expression? Or is it an existing variable? Or even a string?
     if (toPrint.find('"') != std::string::npos) {
         stringPrintFlag = 1;
         std::string::iterator end_pos = std::remove(toPrint.begin(), toPrint.end(), '"');
         toPrint.erase(end_pos, toPrint.end());
     }
+    //If toPrint doesn't need to be printed as a string
     if (stringPrintFlag == 0) {
         toPrint = convertVarsToVals(toPrint);
         if (isItExpressionPattern(toPrint)) {
             Interpreter *interpreter = new Interpreter();
             Expression *expression = nullptr;
             try {
+                //Remove tailing spaces
                 std::string::iterator end_pos = std::remove(toPrint.begin(), toPrint.end(), ' ');
                 toPrint.erase(end_pos, toPrint.end());
                 expression = interpreter->interpret(toPrint);
@@ -663,9 +549,11 @@ int PrintCommand::execute(vector<string> lexer) {
     return numOfParams;
 }
 
+//This method provides an implementation of executing DefineVarCommand.
 int DefineVarCommand::execute(vector<string> lexer) {
     auto i = lexer.begin();
     int numOfParams;
+    //Does the definition include a sim path?
     if ((*(i + 3)) == "sim") {
         numOfParams = 5;
         string param1 = (*(i + 1)); //name
@@ -682,78 +570,54 @@ int DefineVarCommand::execute(vector<string> lexer) {
             symbolTable.actOnTxtSymbolTable(param1, varObj);
         }
     } else {
-        // var h0 = heading
+        //This case matches the line "var h0 = heading"
         numOfParams = 4;
         VarObject* varObject;
         string arrow, simParam;
         float value;
         string param1 = (*(i + 1)); //name
         string nameOfExistingVar = (*(i +3));
-        //not exist in symbolTable
+        //If this var doesn't exist in symbolTable - it's a good reason to crash the program
         if (!symbolTable.findInTxtMap(nameOfExistingVar)) {
             exit(-1);
         } else {
+            //Get all of the parameters needed from the existing variable
             arrow = (*symbolTable.getTxtSymbolTable().at(nameOfExistingVar)).getArrow();
             value = (*symbolTable.getTxtSymbolTable().at(nameOfExistingVar)).getVarValue();
             simParam = (*symbolTable.getTxtSymbolTable().at(nameOfExistingVar)).getSim();
             std::string::iterator end_pos = std::remove(simParam.begin(), simParam.end(), '"');
             simParam.erase(end_pos, simParam.end());
             varObject = new VarObject(arrow, simParam, value);
+            //insert the new var to the map
             symbolTable.actOnTxtSymbolTable(param1, varObject);
-            //symbolTable.actOnXmlSymbolTable(simParam, varObject); // ***************************************
-            // insert to the list
-            string currCommand = "set " + simParam + " " + to_string(value);
-            progMutex.lock();
-            std::cout<< "chackkkkk " + currCommand <<std::endl;
-            sendToSim.push_front(currCommand);
-            progMutex.unlock();
         }
     }
     return numOfParams;
 }
 
+//This method provides an implementation of executing IfCommand.
 int IfCommand::execute(vector<string> lexer) {
     auto i = lexer.begin();
-    int numOfParams = 6;
-    int index = 5;
-    string param1 = (*(i + 1));
-    string condition = (*(i + 2));
-    string param2 = (*(i + 3));
-    double param1Val, param2Val;
-    param1Val = this->getParametersValue(param1);
-    param2Val = this->getParametersValue(param2);
-    if (isConditionTrue(param1Val, param2Val, condition)) {
-        while (index != 0) {
-            auto first = lexer.begin();
-            lexer.erase(first);
-            index--;
-        }
-        map<string, Command*> commandMap = this->commandsForLoops();
-        string key = lexer.at(index);
-        if(key == "}") {
-            return numOfParams;
-        }
-        Command *curr = commandMap[key];
-        if (curr != nullptr) {
-            index += (*curr).execute(lexer);
-            numOfParams += index;
-        }
+    int numOfParams = 1;
+    int j = 0;
+    string key = lexer.at(j);
+    //As long as the last statement of the scope wasn't reached count how many params
+    while (key != "}") {
+        numOfParams++;
+        j++;
+        key = lexer.at(j);
     }
-    return numOfParams;
-}
-
-int WhileCommand::execute(vector<string> lexer) {
-    auto i = lexer.begin();
-    int numOfParams = 6;
-    int index = 5, secondRunIndex = 0;
-    int flag = 0, firstRun = 0;
+    int index = 5;
+    int flag = 0;
     string param1 = (*(i + 1));
     string condition = (*(i + 2));
     string param2 = (*(i + 3));
     double param1Val, param2Val;
     param1Val = getParametersValue(param1);
     param2Val = getParametersValue(param2);
-    while (isConditionTrue(param1Val, param2Val, condition)) {
+    //As long as the statement is actually true
+    while(isConditionTrue(param1Val, param2Val, condition)) {
+        //remove the first line - no need anymore
         while (index != 0 && flag == 0) {
             auto first = lexer.begin();
             lexer.erase(first);
@@ -762,10 +626,66 @@ int WhileCommand::execute(vector<string> lexer) {
         flag = 1;
         map<string, Command*> commandMap = commandsForLoops();
         string key = lexer.at(index);
+        auto first = lexer.cbegin() + index;
+        auto last = lexer.cend();
+        //sub vector
+        vector<string> subLex(first, last);
+        //If the last bracket of the if scope was reached we return
         if(key == "}") {
-            index -= secondRunIndex;
-            secondRunIndex = 0;
-            firstRun = 1;
+            return numOfParams;
+        }
+        Command *curr;
+        if(key != "openDataServer" && key != "connectControlClient" && key != "Print" && key != "Sleep") {
+            curr = commandMap["update"];
+        } else {
+            curr = commandMap[key];
+        }
+        if (curr != nullptr) {
+            index += (*curr).execute(subLex);
+        }
+    }
+    return numOfParams;
+}
+
+//This method provides an implementation of executing WhileCommand.
+int WhileCommand::execute(vector<string> lexer) {
+    auto i = lexer.begin();
+    int numOfParams = 1;
+    int j = 0;
+    string key = lexer.at(j);
+    //As long as the last statement of the scope wasn't reached count how many params
+    while (key != "}") {
+        numOfParams++;
+        j++;
+        key = lexer.at(j);
+    }
+    int index = 5;
+    int flag = 0;
+    string param1 = (*(i + 1));
+    string condition = (*(i + 2));
+    string param2 = (*(i + 3));
+    double param1Val, param2Val;
+    param1Val = getParametersValue(param1);
+    param2Val = getParametersValue(param2);
+    //As long as the statement is actually true
+    while (isConditionTrue(param1Val, param2Val, condition)) {
+        //remove the first line - no need anymore
+        while (index != 0 && flag == 0) {
+            auto first = lexer.begin();
+            lexer.erase(first);
+            index--;
+        }
+        flag = 1;
+        map<string, Command*> commandMap = commandsForLoops();
+        string key = lexer.at(index);
+        auto first = lexer.cbegin() + index;
+        auto last = lexer.cend();
+        //sub vector
+        vector<string> subLex(first, last);
+        //Is the last statement of the scope reached we continue while the condition is true
+        if(key == "}") {
+            // initialize to star get lexer from begginning
+            index = 0;
             continue;
         }
         Command *curr;
@@ -775,19 +695,16 @@ int WhileCommand::execute(vector<string> lexer) {
             curr = commandMap[key];
         }
         if (curr != nullptr) {
-            index += (*curr).execute(lexer);
-            if (firstRun == 0) {
-                numOfParams += index;
-            }
-            secondRunIndex += index;
+            index += (*curr).execute(subLex);
         }
+        //Update the values of the checked variables - for the next run of the while loop (if needed)
         param1Val = getParametersValue(param1);
         param2Val = getParametersValue(param2);
     }
-    std::cout<< "while"<<std::endl;
     return numOfParams;
 }
 
+//This method provides an implementation of executing UpdateVarCommand
 int UpdateVarCommand::execute(vector<string> lexer) {
     int numOfParams = 3;
     float value = 0;
@@ -796,7 +713,7 @@ int UpdateVarCommand::execute(vector<string> lexer) {
     string valByStr = (*(i + 2));
     double paramVal;
     if (isItExpressionPattern(valByStr)) {
-        //func h0 - heading
+        //convertVarsToVals deals with the case "h0 - heading" and convert the varNames to the matching values
         valByStr = convertVarsToVals(valByStr);
         Interpreter *interpreter = new Interpreter();
         Expression *expression = nullptr;
@@ -804,6 +721,7 @@ int UpdateVarCommand::execute(vector<string> lexer) {
             std::string::iterator end_pos = std::remove(valByStr.begin(), valByStr.end(), ' ');
             valByStr.erase(end_pos, valByStr.end());
             expression = interpreter->interpret(valByStr);
+            //The updated value is the result of calculating the expression
             paramVal = expression->calculate();
             delete interpreter;
             delete expression;
@@ -824,23 +742,26 @@ int UpdateVarCommand::execute(vector<string> lexer) {
         exit(-1);
     }
     else {
+        // get the information of this var
         string arrow = (*symbolTable.getTxtSymbolTable().at(varName)).getArrow();
         string simParam = (*symbolTable.getTxtSymbolTable().at(varName)).getSim();
         std::string::iterator end_pos = std::remove(simParam.begin(), simParam.end(), '"');
         simParam.erase(end_pos, simParam.end());
         auto *varObj = new VarObject(arrow, simParam, value);
         symbolTable.actOnTxtSymbolTable(varName, varObj);
-        symbolTable.actOnXmlSymbolTable(simParam, varObj);
-        // insert to the list
+        //update the value
+        VarObject* varObject = symbolTable.getXmlSymbolTable()[simParam];
+        varObject->setVarValue(value);
+        //Insert the update to the list of updates. This list will later be sent to the simulator
         string currCommand = "set " + simParam + " " + to_string(value);
         progMutex.lock();
         sendToSim.push_front(currCommand);
         progMutex.unlock();
     }
-    std::cout<< "update"<<std::endl;
     return numOfParams;
 }
 
+//This method accepts a string, checks if it contains any varname. If so, it replaces the varname in the matching value.
 string Command::convertVarsToVals(string expStr) {
     string token, valsExp, temp;
     list<string> splitList;
@@ -848,7 +769,8 @@ string Command::convertVarsToVals(string expStr) {
     for (pos = 0; pos < expStr.length(); pos++) {
         matchFound = 0;
         token = expStr.substr(pos, len);
-        //Check if one of the operators is within the token
+        //Check if one of the operators is within the token.
+        //If so, strip it, push the var to the list, and push the operator as well.
         operFound = token.find('+');
         if (operFound != string::npos) {
             len = 1;
@@ -914,12 +836,14 @@ string Command::convertVarsToVals(string expStr) {
         }
     }
     for (auto i = splitList.begin(); i != splitList.end(); i++) {
+        //Remove trailing spaces
         std::string::iterator end_pos = std::remove((*i).begin(), (*i).end(), ' ');
         (*i).erase(end_pos, (*i).end());
         if (isItVarNamePattern((*i))) {
             if (!symbolTable.findInTxtMap((*i))) {
                 exit(-1);
             } else {
+                //get the value
                 string sim = (*symbolTable.getTxtSymbolTable().at((*i))).getSim();
                 float valueOfCurrent = (*symbolTable.getXmlSymbolTable().at((sim))).getVarValue();
                 valsExp += to_string(valueOfCurrent);
@@ -931,6 +855,7 @@ string Command::convertVarsToVals(string expStr) {
     return valsExp;
 }
 
+//This method converts a given string to an int type
 int Command::convertStringToInt(string toConvert) {
     int asInt;
     istringstream iss (toConvert);
@@ -941,11 +866,13 @@ int Command::convertStringToInt(string toConvert) {
     return asInt;
 }
 
+//This method returns "true" if a given string matches a varname regex, or "false" otherwise.
 bool Command::isItVarNamePattern(string potential) {
     regex varNamePattern("^(?![0-9])([a-zA-Z]|_|[0-9])+");
     return regex_match(potential, varNamePattern);
 }
 
+//This method returns the value of a certain var that is given as argument.
 double ConditionParser::getParametersValue(string param) {
     double paramVal = 0;
     float floatVal = 0;
@@ -982,6 +909,7 @@ double ConditionParser::getParametersValue(string param) {
     return paramVal;
 }
 
+//This method creates a map that contains all types of possible Commands in a while loop/ if statement.
 map<string, Command *> ConditionParser::commandsForLoops() {
     map<string, Command *> commandMap;
     Command* curr;
@@ -998,6 +926,8 @@ map<string, Command *> ConditionParser::commandsForLoops() {
     return commandMap;
 }
 
+//This method confirms whether 2 values match the condition provided.
+//The supported conditions are - "==","<",">",">=","<=","!="
 bool ConditionParser::isConditionTrue(double param1Val, double param2Val, string condition) {
     bool isConditionTrue = false;
     if(condition == "!=") {
@@ -1006,7 +936,7 @@ bool ConditionParser::isConditionTrue(double param1Val, double param2Val, string
         }
     }
     else if(condition == "==") {
-        if (param1Val == param2Val) {
+        if (abs(param1Val - param2Val) < 0.0001) {
             isConditionTrue = true;
         }
     }
@@ -1033,6 +963,7 @@ bool ConditionParser::isConditionTrue(double param1Val, double param2Val, string
     return isConditionTrue;
 }
 
+//This method returns "true" if a given string matches a Expression regex, or "false" otherwise.
 bool Command::isItExpressionPattern(string potential) {
     char plusOp = '+', minusOp = '-', multOp = '*', divOp = '/';
     if (potential.find(plusOp) != std::string::npos) {

@@ -1,9 +1,10 @@
 //
-// Created by yael on 19/12/2019.
+// Created by yael and linoy on 19/12/2019.
 //
 
-#ifndef EVEN1_PARSER_H
-#define EVEN1_PARSER_H
+#ifndef UNTITLED6_PARSER_H
+#define UNTITLED6_PARSER_H
+
 
 #include <string>
 #include <iostream>
@@ -21,4 +22,4 @@ public:
     map<string, Command*> createCommandMap();
     void parser(vector<string> lexVec);
 };
-#endif //EVEN1_PARSER_H
+#endif //UNTITLED6_PARSER_H

@@ -1,8 +1,9 @@
 //
-// Created by yael on 19/12/2019.
+// Created by yael and linoy on 19/12/2019.
 //
-#ifndef EVEN1_COMMAND_H
-#define EVEN1_COMMAND_H
+
+#ifndef UNTITLED6_COMMAND_H
+#define UNTITLED6_COMMAND_H
 
 #include <string>
 #include <sstream>
@@ -17,19 +18,30 @@
 #include "VarObjects.h"
 #include "SymbolTable.h"
 #include <regex>
+#include <list>
 #include "ex1.h"
 #include "Expression.h"
 #include "Interpreter.h"
 
 using namespace std;
+// global maps and methods
+extern SymbolTable symbolTable;
+extern bool isThreadDone;
+extern bool isProgFinished;
+extern list<string> sendToSim;
 
+void createBufferXmlMap();
+vector<string> splitBuffer(char* buffer, char comma);
+void updateValsOfBufferXmlMap(vector<string> vec);
 int readWithServer(string portToListen);
+int readWithClient(string ip, string portToListen);
 
 class Command {
 protected:
+    string convertVarsToVals(string varsExp);
     int convertStringToInt(string toConvert);
-    bool isItVarNamePattern(string potential);
-    bool isItExpressionPattern(string potential);
+    static bool isItVarNamePattern(string potential);
+    static bool isItExpressionPattern(string potential);
 public:
     virtual int execute(vector<string> lexer) = 0;
 };
@@ -66,9 +78,9 @@ public:
 
 class ConditionParser : public Command {
 protected:
-    double getParametersValue(string param);
-    map<string, Command*> commandsForLoops(vector<string> lexer);
-    bool isConditionTrue(double param1, double param2, string condition);
+    static double getParametersValue(string param);
+    static map<string, Command*> commandsForLoops();
+    static bool isConditionTrue(double param1, double param2, string condition);
 public:
     ConditionParser() = default;
     int execute(vector<string> lexer) override = 0;
@@ -91,4 +103,5 @@ public:
     SleepCommand() = default;
     int execute(vector<string> lexer) override;
 };
-#endif //EVEN1_COMMAND_H
+
+#endif //UNTITLED6_COMMAND_H

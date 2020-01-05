@@ -1,15 +1,16 @@
 //
-// Created by linoy on 25/12/2019.
+// Created by linoy on 12/11/2019.
 //
-
-#ifndef EVEN1_INTERPRETER_H
-#define EVEN1_INTERPRETER_H
 
 #include <regex>
 #include <queue>
 #include <stack>
 #include <iostream>
 #include "Expression.h"
+
+#ifndef UNTITLED6_INTERPRETER_H
+#define UNTITLED6_INTERPRETER_H
+
 using namespace std;
 
 class Interpreter {
@@ -41,5 +42,4 @@ public:
     ~Interpreter();
 };
 
-
-#endif //EVEN1_INTERPRETER_H
+#endif //UNTITLED1_INTERPRETER_H

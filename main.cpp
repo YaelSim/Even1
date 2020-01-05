@@ -1,5 +1,5 @@
 //
-// Created by yael on 16/12/2019.
+// Created by yael and linoy on 16/12/2019.
 //
 #include "lexer.h"
 #include "Parser.h"
@@ -14,6 +14,5 @@ int main(int argc, char** argv) {
     vecLexer = lex.lexer(fileName);
     Parser parser;
     parser.parser(vecLexer);
-
     return 0;
 }

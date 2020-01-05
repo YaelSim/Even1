@@ -1,5 +1,5 @@
 //
-// Created by linoy on 11/11/2019.
+// Created by yael and linoy on 11/11/2019.
 //
 
 #include <regex>
@@ -11,6 +11,7 @@
 
 using namespace std;
 
+//This is the main method - it manipulates the process of calculating the given string expression.
 Expression *Interpreter::interpret(string expStr) {
     string token;
     bool isItFirst = true;
@@ -123,9 +124,9 @@ void Interpreter::setVariables(string strVars) {
             throw exception;
         }
     }
-
 }
 
+//This method is a "fork-road"- it creates the _varQueue according to the given token.
 void Interpreter::checkForComponents(string token, size_t found, bool isFirst, string expStr, size_t currPos) {
     size_t begin = 0;
     const char* exception = "BAD input - doesn't meet the requirements!";
@@ -167,13 +168,6 @@ void Interpreter::checkForComponents(string token, size_t found, bool isFirst, s
     } else {
         isUnary = isItUnary(token, found, isFirst);
         if (isUnary) {
-            //Uplus is represented as '#', Uminus is '$'
-            // -3*x is OK, but -x*3 isn't. Read the next char. If it's a var- Exception. Else - It's valid.
-            //varNameCheck = expStr.substr(expStr.find(token) + token.length(), 1);
-            varNameCheck = expStr.substr(currPos + token.length(), 1);
-            if (isItVarNamePattern(varNameCheck)) {
-                throw exception;
-            }
             if (token[found] == '+') {
                 _operDeque->insert(_operDeque->end(), '#');
             } else if (token[found] == '-') {
@@ -196,8 +190,10 @@ void Interpreter::checkForComponents(string token, size_t found, bool isFirst, s
     }
 }
 
+//This method is an implementation of the shunting yard algorithm.
 Expression* Interpreter::shuntingYard() {
     stack<double> calcStack;
+    string prevOperator;
     const char* exception = "Error! Illegal math expression!";
     while (!_operDeque->empty()) {
         string poppedOperator(1, _operDeque->back());
@@ -210,14 +206,31 @@ Expression* Interpreter::shuntingYard() {
             calcStack.push(stod(popOfQueue));
             _varQueue->pop();
         } else if ((popOfQueue == "+") || (popOfQueue == "-") || (popOfQueue == "*") || (popOfQueue == "/")) {
+            _varQueue->pop();
+            if(!_varQueue->empty()) {
+                prevOperator = _varQueue->front();
+            }
             if (calcStack.size() < 2) {
                 throw exception;
             }  else {
                 Value* rightVal = new Value(calcStack.top());
                 calcStack.pop();
                 Value* leftVal = new Value(calcStack.top());
-                calcStack.pop();
                 if (popOfQueue == "+") {
+                    if (prevOperator == "-") {
+                        double temp = (-1)*(calcStack.top());
+                        calcStack.pop();
+                        leftVal = new Value(temp);
+                        if(!_varQueue->empty()) {
+                            _varQueue->front() = "+";
+                            prevOperator = _varQueue->front();
+                        }
+                    } else {
+                        calcStack.pop();
+                        if(!_varQueue->empty()) {
+                            prevOperator = _varQueue->front();
+                        }
+                    }
                     Expression* result = new Plus(leftVal, rightVal);
                     calcStack.push(result->calculate());
                     if (result != nullptr) {
@@ -225,6 +238,20 @@ Expression* Interpreter::shuntingYard() {
                         result = nullptr;
                     }
                 } else if (popOfQueue == "-") {
+                    if (prevOperator == "-") {
+                        double temp = (-1)*(calcStack.top());
+                        calcStack.pop();
+                        leftVal = new Value(temp);
+                        if(!_varQueue->empty()) {
+                            _varQueue->front() = "+";
+                            prevOperator = _varQueue->front();
+                        }
+                    } else {
+                        calcStack.pop();
+                        if(!_varQueue->empty()) {
+                            prevOperator = _varQueue->front();
+                        }
+                    }
                     Expression* result = new Minus(rightVal, leftVal);
                     calcStack.push(result->calculate());
                     if (result != nullptr) {
@@ -232,21 +259,28 @@ Expression* Interpreter::shuntingYard() {
                         result = nullptr;
                     }
                 } else if (popOfQueue == "*") {
+                    calcStack.pop();
                     Expression* result = new Mul(leftVal, rightVal);
                     calcStack.push(result->calculate());
                     if (result != nullptr) {
                         delete result;
                         result = nullptr;
                     }
+                    if(!_varQueue->empty()) {
+                        prevOperator = _varQueue->front();
+                    }
                 } else {
+                    calcStack.pop();
                     Expression* result = new Div(leftVal, rightVal);
                     calcStack.push(result->calculate());
                     if (result != nullptr) {
                         delete result;
                         result = nullptr;
                     }
+                    if(!_varQueue->empty()) {
+                        prevOperator = _varQueue->front();
+                    }
                 }
-                _varQueue->pop();
             }
             //Uplus - # ; Uminus - $
         } else if ((popOfQueue == "#") || (popOfQueue == "$")) {
@@ -268,6 +302,9 @@ Expression* Interpreter::shuntingYard() {
                 }
             }
             _varQueue->pop();
+            if(!_varQueue->empty()) {
+                prevOperator = _varQueue->front();
+            }
         }
     }
     if (calcStack.size() != 1) {
@@ -278,6 +315,7 @@ Expression* Interpreter::shuntingYard() {
     }
 }
 
+//This method matches one varName and one value that was set with setVariables.
 void Interpreter::matchQueueAndDefinitions(string varName) {
     vector<string> varVals;
     int flag = 0;
@@ -303,6 +341,7 @@ void Interpreter::matchQueueAndDefinitions(string varName) {
             }
         }
     }
+    //If no match was found
     if ((varVals.empty()) || (flag == 0)) {
         throw exception;
     } else {
@@ -310,6 +349,7 @@ void Interpreter::matchQueueAndDefinitions(string varName) {
     }
 }
 
+//This method checks if a certain '+'/'-' is actually a sign of Unary expression.
 bool Interpreter::isItUnary(string token, size_t operFound, bool isFirst) {
     if (operFound == 0) {
         if (((!_operDeque->empty()) && (_operDeque->back() == '(')) || ((_operDeque->empty()) && (isFirst))) {

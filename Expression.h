@@ -1,9 +1,10 @@
 //
-// Created by linoy on 25/12/2019.
+// Created by yael on 10/11/2019.
 //
 
-#ifndef EVEN1_EXPRESSION_H
-#define EVEN1_EXPRESSION_H
+
+#ifndef UNTITLED6_EXPRESSION_H
+#define UNTITLED6_EXPRESSION_H
 
 using namespace std;
 /**
@@ -16,4 +17,4 @@ public:
     virtual ~Expression() {}
 };
 
-#endif //EVEN1_EXPRESSION_H
+#endif //PROJECT_EXPRESSION_H
