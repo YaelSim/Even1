@@ -13,7 +13,7 @@ I hope you enjoy viewing our code! So let us start...
 
 "Engine is warming.... Let's fly!"
 
-##General Description
+## General Description
 
 The project is based on several main components:
 1. FlightGear Simulator - a platform that functions as a client/server (depends on requirements). Each of us installed FlightGear 2019.1.1 version to Ubuntu, Linux O.S. FlightGear contains a beautiful GUI that lets the user be a part of flying a vintage piece of aircraft.
@@ -33,19 +33,19 @@ Each of the components above has a critical part in EVEN1.
 
 
 
-##Installation
+## Installation
 Please follow the next URL in order to install [FlightGear 1.1.19](https://www.flightgear.org/download/).
 
 
 
-#Explenations and Usages
+# Explenations and Usages
 
 
-##Lexer
+## Lexer
 This is a class that is responsible for reading the .txt file, dividing its' content to strings and stores them in a Vector<string>. Of course it will handle spaces, tabs, EOF-s, '\n', etc.
   
   
-##Parser
+## Parser
 This is a class that is responsible for -simple as it is- parsing the given vector and "getting a command" out of the given strings. Each command differs in the amount and type of parameters, so each type of command is handled differently. Let us view this pseudo code-
 
 
@@ -63,7 +63,7 @@ This is a class that is responsible for -simple as it is- parsing the given vect
     }
 
 
-##SymbolTable
+## SymbolTable
 This is a class that resembles to the computer's main memory symbol table. Each var to be declared in the .txt or the .xml files will be inserted to the symbol table. That enables us to know what is the most updated value of a var, for example. This class is implemented with 2 unordered_maps<string, VarObject*>. For instance, the add/update method is we've implemented is seprated for each map.
 
 
@@ -83,7 +83,7 @@ This is a class that resembles to the computer's main memory symbol table. Each 
     }        
     
 
-##VarObject
+## VarObject
 This is a data class that combines the properties of a var - value, sim path (the location of the var's value in the flightgear simulator) and arrow (defined in the .txt file).
 
 
@@ -95,7 +95,7 @@ This is a data class that combines the properties of a var - value, sim path (th
       };
 
 
-##Interpreter, Expression, ex1
+## Interpreter, Expression, ex1
 Those are classes that were imported from our previous project, that are responsible for handling arithmetic expressions. For instance, if the sleep command recieves as parameter (50+90+2-10) milliseconds, we'll use our interpreter to calculate the parameter's value and determine the exact amout of time required to sleep.
 This is an example of how we call the interpreter and calculate a given expression-
 
@@ -119,7 +119,7 @@ This is an example of how we call the interpreter and calculate a given expressi
     }
     
     
- ##Command 
+ ## Command 
  This is a class that describes the behaviour of a general command. The types of commands are - Sleep, Print, DefineVarCommand, UpdateVarCommand, WhileCommand, IfCommand. Each commands is executed according to her functionality. for example, let's read (some of) the PrintCommand execution method:
  
           
